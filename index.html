@@ -786,6 +786,54 @@
     }
 
     /* ================================================================
+       BLOCO "GERAR COM IA" (import sheet)
+    ================================================================ */
+    .ai-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+
+    .ai-box-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 5px;
+    }
+
+    .ai-box-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .ai-box-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .btn-copy-prompt {
+      flex-shrink: 0;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 13px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background var(--ease);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-copy-prompt:active { background: var(--green-dark); }
+    .btn-copy-prompt.copied { background: #059669; }
+
+    /* ================================================================
        ÁREA DE IMPORTAÇÃO
     ================================================================ */
     .import-textarea {
@@ -1000,6 +1048,13 @@
         <button class="btn-sheet-close" id="closeImportBtn" aria-label="Fechar">✕</button>
       </div>
       <div class="sheet-body">
+        <div class="ai-box">
+          <div class="ai-box-header">
+            <span class="ai-box-title">🤖 Gerar com IA</span>
+            <button class="btn-copy-prompt" id="copyPromptBtn">Copiar prompt</button>
+          </div>
+          <p class="ai-box-desc">Copie o prompt, cole no ChatGPT junto com sua lista do WhatsApp e cole o JSON resultante abaixo.</p>
+        </div>
         <textarea
           id="importTextarea"
           class="import-textarea"
@@ -1063,23 +1118,50 @@
       supera:      { label: 'Super A' },
     };
 
-    /**
-     * JSON de exemplo exibido no export (quando a lista está vazia)
-     * e como placeholder na área de importação.
-     * Valores válidos de "category": hortifruti | acougue | laticinios | padaria |
-     *   mercearia | congelados | bebidas | limpeza | higiene | outros
-     * Valores válidos de "supermarket": "" | imperatriz | fort | angeloni |
-     *   bistek | atacadao | supera
-     */
+    /** JSON de exemplo — cobre todas as categorias e supermercados */
     const EXAMPLE_JSON = JSON.stringify({
       items: [
-        { name: 'Tomate',         category: 'hortifruti', supermarket: 'imperatriz' },
-        { name: 'Frango inteiro', category: 'acougue',    supermarket: 'fort'       },
-        { name: 'Leite integral', category: 'laticinios', supermarket: ''           },
-        { name: 'Arroz 5kg',      category: 'mercearia',  supermarket: 'angeloni'   },
-        { name: 'Sabão em pó',    category: 'limpeza',    supermarket: 'bistek'     },
+        { name: 'Tomate',          category: 'hortifruti', supermarket: 'imperatriz' },
+        { name: 'Frango inteiro',  category: 'acougue',    supermarket: 'fort'       },
+        { name: 'Leite integral',  category: 'laticinios', supermarket: ''           },
+        { name: 'Pão de forma',    category: 'padaria',    supermarket: 'angeloni'   },
+        { name: 'Arroz 5kg',       category: 'mercearia',  supermarket: 'bistek'     },
+        { name: 'Pizza congelada', category: 'congelados', supermarket: 'atacadao'   },
+        { name: 'Suco de laranja', category: 'bebidas',    supermarket: 'supera'     },
+        { name: 'Sabão em pó',     category: 'limpeza',    supermarket: 'imperatriz' },
+        { name: 'Shampoo',         category: 'higiene',    supermarket: ''           },
+        { name: 'Pilha AA',        category: 'outros',     supermarket: ''           },
       ],
     }, null, 2);
+
+    /** Prompt completo para enviar a uma IA junto com a lista do WhatsApp */
+    const PROMPT_IA = `Formate a lista de compras abaixo em JSON, seguindo exatamente esta estrutura:
+
+{
+  "items": [
+    { "name": "nome do item", "category": "categoria", "supermarket": "supermercado" }
+  ]
+}
+
+Categorias válidas para "category" (escolha a mais adequada):
+• hortifruti  — frutas, legumes, verduras
+• acougue     — carnes, aves, peixes, embutidos
+• laticinios  — leite, queijo, iogurte, manteiga, ovos
+• padaria     — pão, bolo, biscoito, torrada
+• mercearia   — arroz, feijão, macarrão, óleo, molhos, conservas, temperos
+• congelados  — pizzas, sorvetes, pratos prontos
+• bebidas     — sucos, refrigerantes, água, café, chá
+• limpeza     — detergente, sabão, desinfetante, esponja
+• higiene     — shampoo, sabonete, pasta de dente, desodorante
+• outros      — qualquer coisa que não se encaixe acima
+
+Supermercados válidos para "supermarket" (use "" se não mencionado):
+"" | imperatriz | fort | angeloni | bistek | atacadao | supera
+
+Retorne APENAS o JSON, sem texto antes ou depois.
+
+Lista:
+`;
 
     /* ================================================================
        ESTADO DA APLICAÇÃO
@@ -1651,6 +1733,15 @@
     document.getElementById('copyJsonBtn').addEventListener('click', copyJson);
     document.getElementById('doImportBtn').addEventListener('click', doImport);
 
+    document.getElementById('copyPromptBtn').addEventListener('click', function () {
+      const btn = this;
+      navigator.clipboard.writeText(PROMPT_IA).then(() => {
+        btn.textContent = '✓ Copiado!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copiar prompt'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+
     // Fecha sheet ao clicar no overlay (fora do card)
     ['exportOverlay', 'importOverlay'].forEach(id => {
       document.getElementById(id).addEventListener('click', function (e) {
@@ -1658,11 +1749,35 @@
       });
     });
 
+    // ── Tema claro / escuro ───────────────────────────────────────
+    const THEME_KEY = 'grocery-theme';
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('themeBtn').textContent = theme === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem(THEME_KEY, theme);
+    }
+
+    document.getElementById('themeBtn').addEventListener('click', function () {
+      const current = document.documentElement.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
     /* ================================================================
        INICIALIZAÇÃO
     ================================================================ */
     // Define o placeholder da textarea de importação com o JSON de exemplo
     document.getElementById('importTextarea').placeholder = EXAMPLE_JSON;
+
+    // Aplica tema salvo ou preferência do sistema
+    (function () {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved) {
+        applyTheme(saved);
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        applyTheme('dark');
+      }
+    })();
 
     loadState();
     render();
