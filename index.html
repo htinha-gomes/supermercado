@@ -60,7 +60,7 @@
     }
 
     /* Transição suave ao trocar tema */
-    body, .header, .add-form, .input-name, .select-cat,
+    body, .header, .add-form, .input-name, .input-qty, .select-cat,
     .cat-group, .cat-header, .market-section, .market-header,
     .bottom-sheet, .checked-list, .empty-state,
     .item, .item-check, .btn-io, .btn-clear-all, .btn-sm,
@@ -267,6 +267,29 @@
     .input-name:focus  { border-color: var(--green); background: #fff; }
     .input-name::placeholder { color: var(--text-muted); }
 
+    .input-qty {
+      width: 62px;
+      min-width: 62px;
+      padding: 13px 6px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 16px;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      text-align: center;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color var(--ease), background var(--ease);
+    }
+
+    .input-qty:focus { border-color: var(--green); background: #fff; }
+
+    /* Esconde setas nativas do input number */
+    .input-qty::-webkit-inner-spin-button,
+    .input-qty::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .input-qty[type=number] { -moz-appearance: textfield; }
+
     .btn-add {
       background: var(--green);
       color: #fff;
@@ -465,6 +488,12 @@
     .item-name.is-checked {
       text-decoration: line-through;
       color: var(--text-muted);
+    }
+
+    .item-qty {
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
     }
 
     /* Badge de categoria exibido nos itens comprados */
@@ -940,6 +969,15 @@
           spellcheck="false"
           maxlength="80"
           enterkeyhint="done"
+        />
+        <input
+          type="number"
+          id="inputQty"
+          class="input-qty"
+          min="1"
+          max="999"
+          value="1"
+          aria-label="Quantidade"
         />
         <button type="submit" class="btn-add" aria-label="Adicionar item">+</button>
       </div>
@@ -1421,7 +1459,7 @@ Lista:
                aria-label="${isChecked ? 'Desmarcar' : 'Marcar'} ${esc(item.name)}"
                tabindex="0">
           </div>
-          <span class="item-name ${chkCls}">${esc(item.name)}</span>
+          <span class="item-name ${chkCls}">${esc(item.name)}${item.qty > 1 ? ` <span class="item-qty">(${item.qty})</span>` : ''}</span>
           ${badgesHtml}
           <button class="btn-del" data-action="delete" aria-label="Remover ${esc(item.name)}">×</button>
         </div>`;
@@ -1461,8 +1499,9 @@ Lista:
      * @param {string} name        - nome digitado pelo usuário
      * @param {string} category    - categoria selecionada
      * @param {string} supermarket - supermercado selecionado ('' = qualquer)
+     * @param {number} qty         - quantidade (padrão 1)
      */
-    function addItem(name, category, supermarket) {
+    function addItem(name, category, supermarket, qty) {
       const trimmed = name.trim();
       if (!trimmed) return;
 
@@ -1471,6 +1510,7 @@ Lista:
         name:        trimmed,
         category:    category,
         supermarket: supermarket || '',
+        qty:         (qty && qty > 1) ? qty : 1,
         checked:     false,
         createdAt:   Date.now(),
       });
@@ -1553,6 +1593,7 @@ Lista:
           name:        i.name,
           category:    i.category,
           supermarket: i.supermarket || '',
+          qty:         i.qty || 1,
         })),
       }, null, 2);
     }
@@ -1636,6 +1677,7 @@ Lista:
           name:        i.name.trim().slice(0, 80),
           category:    CATEGORIES[i.category]                        ? i.category        : 'outros',
           supermarket: SUPERMARKETS[i.supermarket || ''] !== undefined ? (i.supermarket || '') : '',
+          qty:         (i.qty && Number.isInteger(i.qty) && i.qty > 1) ? Math.min(i.qty, 999) : 1,
           checked:     false,
           createdAt:   Date.now(),
         }));
@@ -1687,10 +1729,13 @@ Lista:
         return;
       }
 
-      addItem(nameEl.value, catEl.value, marketEl.value);
+      const qtyEl = document.getElementById('inputQty');
+      const qty   = parseInt(qtyEl.value, 10) || 1;
+      addItem(nameEl.value, catEl.value, marketEl.value, qty);
 
-      // Limpa o campo e mantém o foco para adição rápida
+      // Limpa os campos e mantém o foco para adição rápida
       nameEl.value = '';
+      qtyEl.value  = '1';
       nameEl.focus();
     });
 
