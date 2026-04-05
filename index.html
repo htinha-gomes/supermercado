@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#16a34a" />
+  <title>🛒 Lista de Compras</title>
+
+  <style>
+    /* ================================================================
+       VARIÁVEIS & RESET
+    ================================================================ */
+    :root {
+      --green:        #16a34a;
+      --green-dark:   #15803d;
+      --green-light:  #dcfce7;
+      --green-faint:  #f0fdf4;
+      --red:          #ef4444;
+      --text:         #111827;
+      --text-muted:   #6b7280;
+      --border:       #e5e7eb;
+      --bg:           #f3f4f6;
+      --surface:      #ffffff;
+      --radius:       14px;
+      --radius-sm:    9px;
+      --shadow:       0 1px 3px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md:    0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+      --ease:         0.2s ease;
+    }
+
+    /* ================================================================
+       DARK MODE — variáveis globais
+       Substitui as vars de :root quando data-theme="dark" está no <html>
+    ================================================================ */
+    [data-theme="dark"] {
+      --green:       #22c55e;
+      --green-dark:  #16a34a;
+      --green-light: #14532d;
+      --green-faint: #052e16;
+      --red:         #f87171;
+      --text:        #f1f5f9;
+      --text-muted:  #94a3b8;
+      --border:      #334155;
+      --bg:          #0f172a;
+      --surface:     #1e293b;
+      color-scheme:  dark;      /* scrollbars e inputs nativos */
+    }
+
+    /* Dark: header ligeiramente mais escuro */
+    [data-theme="dark"] .header { background: #15803d; }
+
+    /* Dark: aviso de importação */
+    [data-theme="dark"] .import-hint {
+      background: #451a03;
+      border-color: #78350f;
+      color: #fde68a;
+    }
+
+    /* Transição suave ao trocar tema */
+    body, .header, .add-form, .input-name, .select-cat,
+    .cat-group, .cat-header, .market-section, .market-header,
+    .bottom-sheet, .checked-list, .empty-state,
+    .item, .item-check, .btn-io, .btn-clear-all, .btn-sm,
+    .count-badge, .item-market-badge {
+      transition: background-color .28s ease, color .28s ease,
+                  border-color .28s ease, box-shadow .28s ease;
+    }
+
+    /* Botão de alternar tema (no header) */
+    .btn-theme {
+      background: rgba(255,255,255,.15);
+      border: none;
+      border-radius: 20px;
+      padding: 5px 10px;
+      font-size: 15px;
+      line-height: 1;
+      color: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background .2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-theme:active { background: rgba(255,255,255,.28); }
+
+    /* ================================================================
+       CORES DE CATEGORIAS — CSS custom properties + data-cat
+       Definidas aqui e injetadas via data-cat no HTML renderizado.
+       Isso elimina inline styles e permite transição automática.
+    ================================================================ */
+    :root {
+      --cat-hortifruti-bg: #f0fdf4; --cat-hortifruti-c: #15803d;
+      --cat-acougue-bg:    #fff1f2; --cat-acougue-c:    #be123c;
+      --cat-laticinios-bg: #fefce8; --cat-laticinios-c: #a16207;
+      --cat-padaria-bg:    #fff7ed; --cat-padaria-c:    #c2410c;
+      --cat-mercearia-bg:  #eff6ff; --cat-mercearia-c:  #1d4ed8;
+      --cat-congelados-bg: #f0f9ff; --cat-congelados-c: #0284c7;
+      --cat-bebidas-bg:    #fff7ed; --cat-bebidas-c:    #ea580c;
+      --cat-limpeza-bg:    #faf5ff; --cat-limpeza-c:    #7e22ce;
+      --cat-higiene-bg:    #f0f9ff; --cat-higiene-c:    #0369a1;
+      --cat-outros-bg:     #f9fafb; --cat-outros-c:     #374151;
+    }
+
+    [data-theme="dark"] {
+      --cat-hortifruti-bg: #052e16; --cat-hortifruti-c: #86efac;
+      --cat-acougue-bg:    #4c0519; --cat-acougue-c:    #fda4af;
+      --cat-laticinios-bg: #422006; --cat-laticinios-c: #fde047;
+      --cat-padaria-bg:    #431407; --cat-padaria-c:    #fb923c;
+      --cat-mercearia-bg:  #0f2240; --cat-mercearia-c:  #93c5fd;
+      --cat-congelados-bg: #082f49; --cat-congelados-c: #38bdf8;
+      --cat-bebidas-bg:    #3b1002; --cat-bebidas-c:    #fb923c;
+      --cat-limpeza-bg:    #2e1065; --cat-limpeza-c:    #c084fc;
+      --cat-higiene-bg:    #0c2340; --cat-higiene-c:    #7dd3fc;
+      --cat-outros-bg:     #1e293b; --cat-outros-c:     #94a3b8;
+    }
+
+    .cat-header[data-cat="hortifruti"] { background: var(--cat-hortifruti-bg); color: var(--cat-hortifruti-c); }
+    .cat-header[data-cat="acougue"]    { background: var(--cat-acougue-bg);    color: var(--cat-acougue-c);    }
+    .cat-header[data-cat="laticinios"] { background: var(--cat-laticinios-bg); color: var(--cat-laticinios-c); }
+    .cat-header[data-cat="padaria"]    { background: var(--cat-padaria-bg);    color: var(--cat-padaria-c);    }
+    .cat-header[data-cat="mercearia"]  { background: var(--cat-mercearia-bg);  color: var(--cat-mercearia-c);  }
+    .cat-header[data-cat="congelados"] { background: var(--cat-congelados-bg); color: var(--cat-congelados-c); }
+    .cat-header[data-cat="bebidas"]    { background: var(--cat-bebidas-bg);    color: var(--cat-bebidas-c);    }
+    .cat-header[data-cat="limpeza"]    { background: var(--cat-limpeza-bg);    color: var(--cat-limpeza-c);    }
+    .cat-header[data-cat="higiene"]    { background: var(--cat-higiene-bg);    color: var(--cat-higiene-c);    }
+    .cat-header[data-cat="outros"]     { background: var(--cat-outros-bg);     color: var(--cat-outros-c);     }
+
+    /* ================================================================
+       CORES DE SUPERMERCADOS — CSS custom properties + data-market
+    ================================================================ */
+    :root {
+      --mk-any-bg:        #f9fafb; --mk-any-c:        #6b7280; --mk-any-dot:        #d1d5db;
+      --mk-imperatriz-bg: #fef2f2; --mk-imperatriz-c: #b91c1c; --mk-imperatriz-dot: #ef4444;
+      --mk-fort-bg:       #eff6ff; --mk-fort-c:       #1d4ed8; --mk-fort-dot:       #3b82f6;
+      --mk-angeloni-bg:   #f5f3ff; --mk-angeloni-c:   #6d28d9; --mk-angeloni-dot:   #8b5cf6;
+      --mk-bistek-bg:     #ecfdf5; --mk-bistek-c:     #047857; --mk-bistek-dot:     #10b981;
+      --mk-atacadao-bg:   #fffbeb; --mk-atacadao-c:   #b45309; --mk-atacadao-dot:   #f59e0b;
+      --mk-supera-bg:     #f0f9ff; --mk-supera-c:     #0369a1; --mk-supera-dot:     #0ea5e9;
+    }
+
+    [data-theme="dark"] {
+      --mk-any-bg:        #1e293b; --mk-any-c:        #94a3b8; --mk-any-dot:        #475569;
+      --mk-imperatriz-bg: #450a0a; --mk-imperatriz-c: #fca5a5; --mk-imperatriz-dot: #ef4444;
+      --mk-fort-bg:       #0f2240; --mk-fort-c:       #93c5fd; --mk-fort-dot:       #3b82f6;
+      --mk-angeloni-bg:   #2e1065; --mk-angeloni-c:   #c4b5fd; --mk-angeloni-dot:   #8b5cf6;
+      --mk-bistek-bg:     #022c22; --mk-bistek-c:     #6ee7b7; --mk-bistek-dot:     #10b981;
+      --mk-atacadao-bg:   #451a03; --mk-atacadao-c:   #fde68a; --mk-atacadao-dot:   #f59e0b;
+      --mk-supera-bg:     #0c2340; --mk-supera-c:     #7dd3fc; --mk-supera-dot:     #0ea5e9;
+    }
+
+    /* Market header: borda esquerda colorida por supermercado */
+    .market-header { border-left: 4px solid transparent; }
+
+    .market-header[data-market=""]           { background: var(--mk-any-bg);        color: var(--mk-any-c);        border-left-color: var(--mk-any-dot); }
+    .market-header[data-market="imperatriz"] { background: var(--mk-imperatriz-bg); color: var(--mk-imperatriz-c); border-left-color: var(--mk-imperatriz-dot); }
+    .market-header[data-market="fort"]       { background: var(--mk-fort-bg);       color: var(--mk-fort-c);       border-left-color: var(--mk-fort-dot); }
+    .market-header[data-market="angeloni"]   { background: var(--mk-angeloni-bg);   color: var(--mk-angeloni-c);   border-left-color: var(--mk-angeloni-dot); }
+    .market-header[data-market="bistek"]     { background: var(--mk-bistek-bg);     color: var(--mk-bistek-c);     border-left-color: var(--mk-bistek-dot); }
+    .market-header[data-market="atacadao"]   { background: var(--mk-atacadao-bg);   color: var(--mk-atacadao-c);   border-left-color: var(--mk-atacadao-dot); }
+    .market-header[data-market="supera"]     { background: var(--mk-supera-bg);     color: var(--mk-supera-c);     border-left-color: var(--mk-supera-dot); }
+
+    /* Borda colorida em itens com supermercado específico */
+    .item.has-market { border-left: 3px solid transparent; padding-left: 13px; }
+
+    .item.has-market[data-market=""]           { border-left-color: var(--mk-any-dot); }
+    .item.has-market[data-market="imperatriz"] { border-left-color: var(--mk-imperatriz-dot); }
+    .item.has-market[data-market="fort"]       { border-left-color: var(--mk-fort-dot); }
+    .item.has-market[data-market="angeloni"]   { border-left-color: var(--mk-angeloni-dot); }
+    .item.has-market[data-market="bistek"]     { border-left-color: var(--mk-bistek-dot); }
+    .item.has-market[data-market="atacadao"]   { border-left-color: var(--mk-atacadao-dot); }
+    .item.has-market[data-market="supera"]     { border-left-color: var(--mk-supera-dot); }
+
+    /* Badge de mercado na seção Comprados */
+    .item-market-badge[data-market=""]           { background: var(--mk-any-bg);        color: var(--mk-any-c); }
+    .item-market-badge[data-market="imperatriz"] { background: var(--mk-imperatriz-bg); color: var(--mk-imperatriz-c); }
+    .item-market-badge[data-market="fort"]       { background: var(--mk-fort-bg);       color: var(--mk-fort-c); }
+    .item-market-badge[data-market="angeloni"]   { background: var(--mk-angeloni-bg);   color: var(--mk-angeloni-c); }
+    .item-market-badge[data-market="bistek"]     { background: var(--mk-bistek-bg);     color: var(--mk-bistek-c); }
+    .item-market-badge[data-market="atacadao"]   { background: var(--mk-atacadao-bg);   color: var(--mk-atacadao-c); }
+    .item-market-badge[data-market="supera"]     { background: var(--mk-supera-bg);     color: var(--mk-supera-c); }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    button, input, select { font-family: inherit; }
+    button { cursor: pointer; }
+
+    /* ================================================================
+       HEADER
+    ================================================================ */
+    .header {
+      background: var(--green);
+      color: #fff;
+      padding: 18px 16px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: var(--shadow-md);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-counter {
+      font-size: 13px;
+      background: rgba(255,255,255,.22);
+      border-radius: 20px;
+      padding: 4px 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* ================================================================
+       FORMULÁRIO DE ADIÇÃO
+    ================================================================ */
+    .add-form-wrap { padding: 14px 14px 0; }
+
+    .add-form {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .form-row-top { display: flex; gap: 8px; }
+
+    .input-name {
+      flex: 1;
+      padding: 13px 14px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 16px;        /* 16px evita zoom automático no iOS */
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color var(--ease), background var(--ease);
+      -webkit-appearance: none;
+    }
+
+    .input-name:focus  { border-color: var(--green); background: #fff; }
+    .input-name::placeholder { color: var(--text-muted); }
+
+    .btn-add {
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      width: 50px;
+      height: 50px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      line-height: 1;
+      transition: background var(--ease), transform .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-add:active { background: var(--green-dark); transform: scale(.94); }
+
+    /* Seta customizada no select */
+    .select-cat {
+      width: 100%;
+      padding: 12px 38px 12px 14px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      color: var(--text);
+      background-color: var(--bg);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 11px center;
+      background-size: 18px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color var(--ease), background-color var(--ease);
+    }
+
+    .select-cat:focus { border-color: var(--green); background-color: #fff; }
+
+    /* ================================================================
+       LAYOUT PRINCIPAL
+    ================================================================ */
+    .main {
+      padding: 16px 14px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    /* ================================================================
+       CABEÇALHO DE SEÇÃO
+    ================================================================ */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--text-muted);
+    }
+
+    .section-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .count-badge {
+      background: var(--green-light);
+      color: var(--green-dark);
+      border-radius: 20px;
+      padding: 2px 9px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .count-badge.muted {
+      background: #f3f4f6;
+      color: var(--text-muted);
+    }
+
+    /* Botão pequeno de ação no cabeçalho */
+    .btn-sm {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 11px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: all var(--ease);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-sm:active { background: #fee2e2; color: var(--red); border-color: var(--red); }
+
+    /* ================================================================
+       GRUPO POR CATEGORIA (seção Pendentes)
+    ================================================================ */
+    .cat-group {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .cat-group:last-child { margin-bottom: 0; }
+
+    .cat-header {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      border-bottom: 1px solid rgba(0,0,0,.07);
+    }
+
+    .cat-count {
+      margin-left: auto;
+      font-size: 12px;
+      opacity: .65;
+      font-weight: 600;
+    }
+
+    /* ================================================================
+       ITEM INDIVIDUAL
+    ================================================================ */
+    .item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      min-height: 54px;                    /* touch target */
+      animation: slideIn .22s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .item:last-child { border-bottom: none; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+
+    /* Círculo de check */
+    .item-check {
+      width: 26px;
+      height: 26px;
+      min-width: 26px;
+      border-radius: 50%;
+      border: 2.5px solid var(--border);
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color var(--ease), background var(--ease);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .item-check:hover,
+    .item-check:focus-visible { border-color: var(--green); outline: none; }
+
+    /* Estado marcado: fundo verde + checkmark SVG via pseudo-elemento */
+    .item-check.is-checked {
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .item-check.is-checked::after {
+      content: '';
+      display: block;
+      width: 10px;
+      height: 6px;
+      border-left: 2.5px solid #fff;
+      border-bottom: 2.5px solid #fff;
+      transform: rotate(-45deg) translateY(-1px);
+    }
+
+    .item-name {
+      flex: 1;
+      font-size: 16px;
+      line-height: 1.3;
+    }
+
+    .item-name.is-checked {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    /* Badge de categoria exibido nos itens comprados */
+    .item-cat-badge {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-radius: 5px;
+      padding: 2px 6px;
+      white-space: nowrap;
+    }
+
+    /* Botão de excluir */
+    .btn-del {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      opacity: .3;
+      font-size: 20px;
+      line-height: 1;
+      padding: 0;
+      min-width: 36px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity var(--ease), color var(--ease);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-del:active { opacity: 1; color: var(--red); }
+
+    /* ================================================================
+       SEÇÃO COMPRADOS
+    ================================================================ */
+    .checked-list {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    /* Itens comprados ficam translúcidos */
+    .item.is-done { opacity: .55; }
+    .item.is-done:hover { opacity: .75; }
+
+    /* ================================================================
+       ESTADO VAZIO
+    ================================================================ */
+    .empty-state {
+      text-align: center;
+      padding: 38px 20px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .empty-icon  { font-size: 46px; display: block; margin-bottom: 10px; }
+    .empty-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+    .empty-sub   { font-size: 13px; color: var(--text-muted); }
+
+    /* ================================================================
+       BOTÃO "LIMPAR TUDO"
+    ================================================================ */
+    .btn-clear-all {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 14px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      transition: all var(--ease);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-clear-all:active {
+      border-color: var(--red);
+      color: var(--red);
+      background: #fff5f5;
+    }
+
+    /* ================================================================
+       GRUPOS POR SUPERMERCADO (modo multi-mercado)
+    ================================================================ */
+
+    /* Card externo que envolve um supermercado inteiro */
+    .market-section {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .market-section:last-child { margin-bottom: 0; }
+
+    /* Cabeçalho do supermercado — mais proeminente que o de categoria */
+    .market-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 16px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .1px;
+      border-bottom: 1px solid rgba(0,0,0,.08);
+    }
+
+    .market-header-count {
+      margin-left: auto;
+      font-size: 12px;
+      font-weight: 600;
+      opacity: .7;
+      background: rgba(255,255,255,.5);
+      border-radius: 12px;
+      padding: 2px 9px;
+    }
+
+    /* Cat-groups dentro de um market-section: sem sombra/radius próprios */
+    .market-body .cat-group {
+      border-radius: 0;
+      box-shadow: none;
+      margin-bottom: 0;
+      border-top: 1px solid rgba(0,0,0,.05);
+    }
+
+    .market-body .cat-group:first-child { border-top: none; }
+
+    /* ================================================================
+       BADGES DE SUPERMERCADO
+    ================================================================ */
+
+    /* Wrapper vertical para os badges na seção Comprados */
+    .item-badges {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+
+    /* Badge do supermercado (exibido na seção Comprados) */
+    .item-market-badge {
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 5px;
+      padding: 2px 7px;
+      white-space: nowrap;
+    }
+
+    /* ================================================================
+       BOTÕES EXPORTAR / IMPORTAR
+    ================================================================ */
+    .io-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-io {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 13px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      transition: all var(--ease);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-io:active { border-color: var(--green); color: var(--green); background: var(--green-faint); }
+
+    /* ================================================================
+       MODAL / BOTTOM SHEET
+    ================================================================ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .bottom-sheet {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      z-index: 201;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform .35s cubic-bezier(.32,.72,0,1);
+      box-shadow: 0 -4px 32px rgba(0,0,0,.15);
+    }
+
+    .bottom-sheet.open { transform: translateY(0); }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 12px auto 0;
+      flex-shrink: 0;
+    }
+
+    .sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px 12px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sheet-title { font-size: 17px; font-weight: 700; }
+
+    .btn-sheet-close {
+      background: var(--bg);
+      border: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      font-size: 16px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--ease);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-sheet-close:active { background: var(--border); }
+
+    .sheet-body {
+      padding: 18px 20px 36px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* ================================================================
+       BLOCO DE CÓDIGO (estilo ChatGPT)
+    ================================================================ */
+    .code-block {
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .code-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #161b22;
+      padding: 8px 14px;
+    }
+
+    .code-lang {
+      color: #8b949e;
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .btn-copy {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 6px;
+      color: #c9d1d9;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 11px;
+      cursor: pointer;
+      transition: all var(--ease);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-copy:active  { background: rgba(255,255,255,.14); }
+    .btn-copy.copied  { color: #3fb950; border-color: rgba(63,185,80,.5); }
+
+    .code-content {
+      background: #0d1117;
+      padding: 16px;
+      overflow-x: auto;
+      max-height: 360px;
+      overflow-y: auto;
+      color: #e6edf3;
+      font-family: 'SF Mono', Menlo, Consolas, 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      white-space: pre;
+      margin: 0;
+    }
+
+    /* ================================================================
+       ÁREA DE IMPORTAÇÃO
+    ================================================================ */
+    .import-textarea {
+      width: 100%;
+      min-height: 210px;
+      padding: 14px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'SF Mono', Menlo, Consolas, 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      color: #e6edf3;
+      background: #0d1117;
+      resize: vertical;
+      outline: none;
+      transition: border-color var(--ease);
+    }
+
+    .import-textarea:focus   { border-color: var(--green); }
+    .import-textarea::placeholder { color: #4a5568; }
+
+    .import-hint {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: var(--radius-sm);
+      padding: 10px 13px;
+      font-size: 13px;
+      color: #92400e;
+      margin: 12px 0 16px;
+      line-height: 1.45;
+    }
+
+    .btn-import {
+      width: 100%;
+      padding: 14px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 700;
+      transition: background var(--ease), transform .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-import:active { background: var(--green-dark); transform: scale(.98); }
+
+    /* ================================================================
+       TOAST (feedback visual)
+    ================================================================ */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(90px);
+      background: #1f2937;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      z-index: 999;
+      pointer-events: none;
+      transition: transform .32s cubic-bezier(.34,1.56,.64,1);
+    }
+
+    .toast.visible { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       CABEÇALHO FIXO
+  ============================================================ -->
+  <header class="header">
+    <div class="header-inner">
+      <h1 class="header-title">
+        <span aria-hidden="true">🛒</span> Lista de Compras
+      </h1>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn-theme" id="themeBtn" aria-label="Alternar tema">🌙</button>
+        <span class="header-counter" id="totalCounter">0 itens</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       FORMULÁRIO DE ADIÇÃO
+  ============================================================ -->
+  <div class="add-form-wrap">
+    <form class="add-form" id="addForm" novalidate>
+      <div class="form-row-top">
+        <input
+          type="text"
+          id="inputName"
+          class="input-name"
+          placeholder="Nome do item..."
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+          maxlength="80"
+          enterkeyhint="done"
+        />
+        <button type="submit" class="btn-add" aria-label="Adicionar item">+</button>
+      </div>
+
+      <select id="inputCategory" class="select-cat" aria-label="Categoria">
+        <option value="hortifruti">🥬 Hortifruti</option>
+        <option value="acougue">🥩 Açougue</option>
+        <option value="laticinios">🧀 Laticínios</option>
+        <option value="padaria">🍞 Padaria</option>
+        <option value="mercearia" selected>🛒 Mercearia</option>
+        <option value="congelados">🧊 Congelados</option>
+        <option value="bebidas">🥤 Bebidas</option>
+        <option value="limpeza">🧹 Limpeza</option>
+        <option value="higiene">🧴 Higiene</option>
+        <option value="outros">📦 Outros</option>
+      </select>
+
+      <select id="inputMarket" class="select-cat" aria-label="Supermercado (opcional)">
+        <option value="">🛍️ Qualquer mercado (opcional)</option>
+        <option value="imperatriz">🏪 Imperatriz</option>
+        <option value="fort">🏪 Fort</option>
+        <option value="angeloni">🏪 Angeloni</option>
+        <option value="bistek">🏪 Bistek</option>
+        <option value="atacadao">🏪 Atacadão</option>
+        <option value="supera">🏪 Super A</option>
+      </select>
+    </form>
+  </div>
+
+  <!-- ============================================================
+       CONTEÚDO PRINCIPAL
+  ============================================================ -->
+  <main class="main" id="mainContent">
+
+    <!-- Seção: Pendentes -->
+    <section id="sectionPending">
+      <div class="section-header">
+        <span class="section-label">Pendentes</span>
+        <span class="count-badge" id="pendingBadge">0</span>
+      </div>
+      <div id="pendingList"></div>
+    </section>
+
+    <!-- Seção: Comprados -->
+    <section id="sectionChecked" style="display:none">
+      <div class="section-header">
+        <span class="section-label">✅ Comprados</span>
+        <div class="section-right">
+          <span class="count-badge muted" id="checkedBadge">0</span>
+          <button class="btn-sm" id="clearCheckedBtn" aria-label="Limpar itens comprados">
+            Limpar
+          </button>
+        </div>
+      </div>
+      <div id="checkedList"></div>
+    </section>
+
+    <!-- Botões: Exportar / Importar -->
+    <div class="io-buttons">
+      <button class="btn-io" id="exportBtn">📤 Exportar</button>
+      <button class="btn-io" id="importBtn">📥 Importar</button>
+    </div>
+
+    <!-- Botão: Limpar tudo -->
+    <div id="wrapClearAll" style="display:none">
+      <button class="btn-clear-all" id="clearAllBtn">
+        <span aria-hidden="true">🗑</span> Limpar toda a lista
+      </button>
+    </div>
+
+  </main>
+
+  <!-- Toast de feedback -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ============================================================
+       MODAL: EXPORTAR
+  ============================================================ -->
+  <div class="modal-overlay" id="exportOverlay">
+    <div class="bottom-sheet" id="exportSheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <span class="sheet-title">📤 Exportar Lista</span>
+        <button class="btn-sheet-close" id="closeExportBtn" aria-label="Fechar">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-lang">json</span>
+            <button class="btn-copy" id="copyJsonBtn">📋 Copiar</button>
+          </div>
+          <pre class="code-content" id="exportCodeContent"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MODAL: IMPORTAR
+  ============================================================ -->
+  <div class="modal-overlay" id="importOverlay">
+    <div class="bottom-sheet" id="importSheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <span class="sheet-title">📥 Importar Lista</span>
+        <button class="btn-sheet-close" id="closeImportBtn" aria-label="Fechar">✕</button>
+      </div>
+      <div class="sheet-body">
+        <textarea
+          id="importTextarea"
+          class="import-textarea"
+          spellcheck="false"
+          autocorrect="off"
+          autocapitalize="off"
+          aria-label="Cole o JSON aqui"
+        ></textarea>
+        <div class="import-hint">
+          <span>⚠️</span>
+          <span>A importação <strong>substitui</strong> a lista atual. Exporte primeiro se quiser guardar os dados.</span>
+        </div>
+        <button class="btn-import" id="doImportBtn">📥 Importar Lista</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       JAVASCRIPT
+  ============================================================ -->
+  <script>
+    /* ================================================================
+       CONSTANTES
+    ================================================================ */
+
+    const STORAGE_KEY = 'grocery-list-v2';
+
+    /**
+     * Metadados de cada categoria: emoji, rótulo, cores do cabeçalho.
+     * A ordem aqui define como os grupos aparecem na tela.
+     */
+    // Cores das categorias agora vivem 100% no CSS (data-cat attribute).
+    // Este objeto contém apenas label e emoji — sem inline styles.
+    const CATEGORIES = {
+      hortifruti: { label: 'Hortifruti', emoji: '🥬' },
+      acougue:    { label: 'Açougue',    emoji: '🥩' },
+      laticinios: { label: 'Laticínios', emoji: '🧀' },
+      padaria:    { label: 'Padaria',    emoji: '🍞' },
+      mercearia:  { label: 'Mercearia',  emoji: '🛒' },
+      congelados: { label: 'Congelados', emoji: '🧊' },
+      bebidas:    { label: 'Bebidas',    emoji: '🥤' },
+      limpeza:    { label: 'Limpeza',    emoji: '🧹' },
+      higiene:    { label: 'Higiene',    emoji: '🧴' },
+      outros:     { label: 'Outros',     emoji: '📦' },
+    };
+
+    /**
+     * Metadados de cada supermercado.
+     * dot  = cor do indicador visual (borda lateral e badges).
+     * A ordem aqui define como as seções aparecem em modo multi-mercado.
+     */
+    // Cores dos supermercados agora vivem 100% no CSS (data-market attribute).
+    // Este objeto contém apenas label — sem inline styles.
+    const SUPERMARKETS = {
+      '':          { label: 'Qualquer mercado' },
+      imperatriz:  { label: 'Imperatriz' },
+      fort:        { label: 'Fort' },
+      angeloni:    { label: 'Angeloni' },
+      bistek:      { label: 'Bistek' },
+      atacadao:    { label: 'Atacadão' },
+      supera:      { label: 'Super A' },
+    };
+
+    /**
+     * JSON de exemplo exibido no export (quando a lista está vazia)
+     * e como placeholder na área de importação.
+     * Valores válidos de "category": hortifruti | acougue | laticinios | padaria |
+     *   mercearia | congelados | bebidas | limpeza | higiene | outros
+     * Valores válidos de "supermarket": "" | imperatriz | fort | angeloni |
+     *   bistek | atacadao | supera
+     */
+    const EXAMPLE_JSON = JSON.stringify({
+      items: [
+        { name: 'Tomate',         category: 'hortifruti', supermarket: 'imperatriz' },
+        { name: 'Frango inteiro', category: 'acougue',    supermarket: 'fort'       },
+        { name: 'Leite integral', category: 'laticinios', supermarket: ''           },
+        { name: 'Arroz 5kg',      category: 'mercearia',  supermarket: 'angeloni'   },
+        { name: 'Sabão em pó',    category: 'limpeza',    supermarket: 'bistek'     },
+      ],
+    }, null, 2);
+
+    /* ================================================================
+       ESTADO DA APLICAÇÃO
+       items: Array de { id, name, category, supermarket, checked, createdAt }
+    ================================================================ */
+    let state = { items: [] };
+
+    /* ================================================================
+       PERSISTÊNCIA (localStorage)
+    ================================================================ */
+
+    /** Carrega o estado salvo. Usa estado vazio em caso de erro. */
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) state = JSON.parse(raw);
+      } catch (err) {
+        console.warn('[GroceryApp] Falha ao carregar localStorage:', err);
+        state = { items: [] };
+      }
+    }
+
+    /** Persiste o estado atual no localStorage. */
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (err) {
+        console.warn('[GroceryApp] Falha ao salvar localStorage:', err);
+      }
+    }
+
+    /* ================================================================
+       UTILITÁRIOS
+    ================================================================ */
+
+    /** Gera um ID único simples (alfanumérico). */
+    function genId() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    /** Escapa HTML para evitar XSS ao injetar texto do usuário. */
+    function esc(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    let _toastTimer = null;
+
+    /** Exibe uma notificação temporária na parte inferior da tela. */
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('visible');
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => el.classList.remove('visible'), 2200);
+    }
+
+    /* ================================================================
+       RENDERIZAÇÃO
+    ================================================================ */
+
+    /** Re-renderiza toda a interface a partir do estado atual. */
+    function render() {
+      renderPending();
+      renderChecked();
+      updateCounters();
+    }
+
+    /**
+     * Retorna os valores únicos de supermercado (não vazios) de um array de itens.
+     * @param {Array} items
+     * @returns {string[]}
+     */
+    function getUniqueMarkets(items) {
+      return [...new Set(items.map(i => i.supermarket || '').filter(Boolean))];
+    }
+
+    /**
+     * Renderiza os itens PENDENTES.
+     * - 2+ supermercados distintos → agrupa por supermercado → categoria
+     * - Caso contrário → agrupa apenas por categoria
+     */
+    function renderPending() {
+      const container = document.getElementById('pendingList');
+      const pending   = state.items.filter(i => !i.checked);
+
+      // Estado vazio ───────────────────────────────────────────────
+      if (pending.length === 0) {
+        const allDone = state.items.length > 0;
+        container.innerHTML = `
+          <div class="empty-state">
+            <span class="empty-icon">${allDone ? '🎉' : '🍃'}</span>
+            <p class="empty-title">${allDone ? 'Tudo comprado!' : 'Lista vazia'}</p>
+            <p class="empty-sub">${allDone ? 'Parabéns, você pegou tudo!' : 'Adicione itens acima para começar'}</p>
+          </div>`;
+        return;
+      }
+
+      const uniqueMarkets = getUniqueMarkets(pending);
+
+      if (uniqueMarkets.length > 1) {
+        // Modo multi-mercado: agrupa por supermercado → categoria
+        container.innerHTML = renderByMarketThenCategory(pending, uniqueMarkets);
+      } else {
+        // Modo simples: agrupa apenas por categoria
+        container.innerHTML = renderByCategoryOnly(pending);
+      }
+    }
+
+    /**
+     * Gera HTML agrupando itens por supermercado → categoria.
+     * Itens sem supermercado ficam em "Qualquer mercado" no final.
+     * @param {Array}    pending       - itens pendentes
+     * @param {string[]} uniqueMarkets - chaves dos mercados presentes
+     */
+    function renderByMarketThenCategory(pending, uniqueMarkets) {
+      const sections = [];
+
+      // Mantém a ordem definida em SUPERMARKETS
+      const orderedMarkets = Object.keys(SUPERMARKETS)
+        .filter(k => k && uniqueMarkets.includes(k));
+      // Mercados desconhecidos (não cadastrados) vão ao final
+      uniqueMarkets
+        .filter(k => !SUPERMARKETS[k])
+        .forEach(k => orderedMarkets.push(k));
+
+      for (const mKey of orderedMarkets) {
+        const mItems = pending.filter(i => (i.supermarket || '') === mKey);
+        if (mItems.length > 0) sections.push(renderMarketSection(mKey, mItems));
+      }
+
+      // Itens sem supermercado definido
+      const noMarket = pending.filter(i => !(i.supermarket || ''));
+      if (noMarket.length > 0) sections.push(renderMarketSection('', noMarket));
+
+      return sections.join('');
+    }
+
+    /**
+     * Gera o HTML de uma seção de supermercado com sub-grupos de categoria.
+     * @param {string} mKey  - chave do supermercado ('' = sem mercado)
+     * @param {Array}  items - itens desse mercado
+     */
+    function renderMarketSection(mKey, items) {
+      const market = SUPERMARKETS[mKey] || SUPERMARKETS[''];
+      return `
+        <div class="market-section">
+          <div class="market-header" data-market="${mKey}">
+            <span aria-hidden="true">🏪</span>
+            <span>${market.label}</span>
+            <span class="market-header-count">${items.length} ${items.length === 1 ? 'item' : 'itens'}</span>
+          </div>
+          <div class="market-body">
+            ${renderByCategoryOnly(items, { insideMarket: true })}
+          </div>
+        </div>`;
+    }
+
+    /**
+     * Gera HTML agrupando itens por categoria.
+     * @param {Array}   items
+     * @param {Object}  opts
+     * @param {boolean} opts.insideMarket - usa classe modificadora para cat-group
+     */
+    function renderByCategoryOnly(items, opts = {}) {
+      const grouped = {};
+      for (const key of Object.keys(CATEGORIES)) {
+        const catItems = items.filter(i => i.category === key);
+        if (catItems.length > 0) grouped[key] = catItems;
+      }
+      // Categorias desconhecidas vão para "outros"
+      items
+        .filter(i => !CATEGORIES[i.category])
+        .forEach(i => (grouped['outros'] = grouped['outros'] || []).push(i));
+
+      return Object.entries(grouped)
+        .map(([key, catItems]) => renderCategoryGroup(key, catItems, opts))
+        .join('');
+    }
+
+    /**
+     * Renderiza um grupo de categoria com cabeçalho colorido e itens.
+     * @param {string}  catKey
+     * @param {Array}   items
+     * @param {Object}  opts
+     * @param {boolean} opts.insideMarket - aplica classe cat-group--inner
+     */
+    function renderCategoryGroup(catKey, items, opts = {}) {
+      const cat        = CATEGORIES[catKey] || CATEGORIES.outros;
+      const extraClass = opts.insideMarket ? ' cat-group--inner' : '';
+      return `
+        <div class="cat-group${extraClass}">
+          <div class="cat-header" data-cat="${catKey}">
+            <span aria-hidden="true">${cat.emoji}</span>
+            <span>${cat.label}</span>
+            <span class="cat-count">${items.length}</span>
+          </div>
+          ${items.map(item => renderItem(item)).join('')}
+        </div>`;
+    }
+
+    /**
+     * Renderiza os itens COMPRADOS em lista simples (sem agrupamento).
+     */
+    function renderChecked() {
+      const container = document.getElementById('checkedList');
+      const checked   = state.items.filter(i => i.checked);
+
+      if (checked.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="checked-list">
+          ${checked.map(item => renderItem(item)).join('')}
+        </div>`;
+    }
+
+    /**
+     * Gera o HTML de um item (linha da lista).
+     * - Itens com supermercado específico: borda colorida à esquerda.
+     * - Seção Comprados: badges de categoria e supermercado empilhados.
+     * @param {Object} item
+     */
+    function renderItem(item) {
+      const cat       = CATEGORIES[item.category] || CATEGORIES.outros;
+      const mKey      = item.supermarket || '';
+      const market    = SUPERMARKETS[mKey] || SUPERMARKETS[''];
+      const hasMarket = mKey !== '';
+      const isChecked = item.checked;
+      const chkCls    = isChecked ? 'is-checked' : '';
+
+      // Borda e badge de mercado usam data-market + CSS — sem inline styles.
+      const marketAttr = hasMarket ? ` data-market="${mKey}"` : '';
+
+      let badgesHtml = '';
+      if (isChecked) {
+        badgesHtml = `
+          <div class="item-badges">
+            <span class="item-cat-badge">${cat.emoji} ${cat.label}</span>
+            ${hasMarket
+              ? `<span class="item-market-badge" data-market="${mKey}">${market.label}</span>`
+              : ''}
+          </div>`;
+      }
+
+      return `
+        <div class="item${isChecked ? ' is-done' : ''}${hasMarket ? ' has-market' : ''}"
+             data-id="${item.id}"${marketAttr}>
+          <div class="item-check ${chkCls}"
+               role="checkbox"
+               aria-checked="${isChecked}"
+               aria-label="${isChecked ? 'Desmarcar' : 'Marcar'} ${esc(item.name)}"
+               tabindex="0">
+          </div>
+          <span class="item-name ${chkCls}">${esc(item.name)}</span>
+          ${badgesHtml}
+          <button class="btn-del" data-action="delete" aria-label="Remover ${esc(item.name)}">×</button>
+        </div>`;
+    }
+
+    /**
+     * Atualiza contadores e visibilidade das seções.
+     */
+    function updateCounters() {
+      const total      = state.items.length;
+      const nChecked   = state.items.filter(i => i.checked).length;
+      const nPending   = total - nChecked;
+
+      // Cabeçalho
+      document.getElementById('totalCounter').textContent =
+        total === 0 ? '0 itens' : `${total} ${total === 1 ? 'item' : 'itens'}`;
+
+      // Badges
+      document.getElementById('pendingBadge').textContent = nPending;
+      document.getElementById('checkedBadge').textContent = nChecked;
+
+      // Seção comprados: só aparece quando há ao menos 1 item comprado
+      document.getElementById('sectionChecked').style.display =
+        nChecked > 0 ? '' : 'none';
+
+      // Botão "Limpar tudo": só aparece quando há ao menos 1 item
+      document.getElementById('wrapClearAll').style.display =
+        total > 0 ? '' : 'none';
+    }
+
+    /* ================================================================
+       AÇÕES
+    ================================================================ */
+
+    /**
+     * Adiciona um novo item ao início da lista.
+     * @param {string} name        - nome digitado pelo usuário
+     * @param {string} category    - categoria selecionada
+     * @param {string} supermarket - supermercado selecionado ('' = qualquer)
+     */
+    function addItem(name, category, supermarket) {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+
+      state.items.unshift({
+        id:          genId(),
+        name:        trimmed,
+        category:    category,
+        supermarket: supermarket || '',
+        checked:     false,
+        createdAt:   Date.now(),
+      });
+
+      saveState();
+      render();
+      showToast(`"${trimmed}" adicionado!`);
+    }
+
+    /**
+     * Alterna o estado checked/unchecked de um item.
+     * - false → true  : move para Comprados
+     * - true  → false : volta para Pendentes (no seu grupo)
+     * @param {string} id - id do item
+     */
+    function toggleItem(id) {
+      const item = state.items.find(i => i.id === id);
+      if (!item) return;
+
+      item.checked = !item.checked;
+      saveState();
+      render();
+    }
+
+    /**
+     * Remove um item da lista permanentemente.
+     * @param {string} id - id do item
+     */
+    function deleteItem(id) {
+      const item = state.items.find(i => i.id === id);
+      if (!item) return;
+
+      state.items = state.items.filter(i => i.id !== id);
+      saveState();
+      render();
+      showToast(`"${item.name}" removido`);
+    }
+
+    /**
+     * Remove todos os itens marcados como comprados.
+     * Pede confirmação antes de executar.
+     */
+    function clearChecked() {
+      const count = state.items.filter(i => i.checked).length;
+      if (count === 0) return;
+
+      if (!confirm(`Remover ${count} item${count > 1 ? 's' : ''} comprado${count > 1 ? 's' : ''}?`)) return;
+
+      state.items = state.items.filter(i => !i.checked);
+      saveState();
+      render();
+      showToast('Comprados removidos!');
+    }
+
+    /**
+     * Limpa toda a lista (pendentes + comprados).
+     * Pede confirmação antes de executar.
+     */
+    function clearAll() {
+      if (state.items.length === 0) return;
+      if (!confirm('Limpar toda a lista? Esta ação não pode ser desfeita.')) return;
+
+      state.items = [];
+      saveState();
+      render();
+      showToast('Lista limpa!');
+    }
+
+    /* ================================================================
+       EXPORTAR / IMPORTAR
+    ================================================================ */
+
+    /**
+     * Gera o JSON de exportação: apenas name, category e supermarket.
+     * id, checked e createdAt são omitidos (recriados na importação).
+     */
+    function generateExportJson() {
+      return JSON.stringify({
+        items: state.items.map(i => ({
+          name:        i.name,
+          category:    i.category,
+          supermarket: i.supermarket || '',
+        })),
+      }, null, 2);
+    }
+
+    /** Abre o bottom sheet de exportação e preenche o código. */
+    function openExportSheet() {
+      const json = state.items.length > 0 ? generateExportJson() : EXAMPLE_JSON;
+      document.getElementById('exportCodeContent').textContent = json;
+
+      const copyBtn = document.getElementById('copyJsonBtn');
+      copyBtn.textContent = '📋 Copiar';
+      copyBtn.classList.remove('copied');
+
+      openSheet('exportOverlay', 'exportSheet');
+    }
+
+    /** Copia o JSON do bloco de código para a área de transferência. */
+    function copyJson() {
+      const text = document.getElementById('exportCodeContent').textContent;
+      const btn  = document.getElementById('copyJsonBtn');
+
+      const markCopied = () => {
+        btn.textContent = '✅ Copiado!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = '📋 Copiar';
+          btn.classList.remove('copied');
+        }, 2200);
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(markCopied).catch(() => fallbackCopy(text, markCopied));
+      } else {
+        fallbackCopy(text, markCopied);
+      }
+    }
+
+    /** Fallback de cópia via execCommand para browsers sem Clipboard API. */
+    function fallbackCopy(text, onSuccess) {
+      const el = document.createElement('textarea');
+      el.value = text;
+      el.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+      document.body.appendChild(el);
+      el.select();
+      try { document.execCommand('copy'); onSuccess(); } catch (e) { /* silencia */ }
+      document.body.removeChild(el);
+    }
+
+    /** Abre o bottom sheet de importação (limpa a textarea). */
+    function openImportSheet() {
+      document.getElementById('importTextarea').value = '';
+      openSheet('importOverlay', 'importSheet');
+    }
+
+    /**
+     * Lê a textarea, valida o JSON e substitui a lista.
+     * Categorias/supermercados desconhecidos são mapeados para valores padrão.
+     */
+    function doImport() {
+      const raw = document.getElementById('importTextarea').value.trim();
+
+      if (!raw) { showToast('Cole um JSON válido primeiro!'); return; }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        showToast('JSON inválido — verifique o formato.');
+        return;
+      }
+
+      if (!parsed || !Array.isArray(parsed.items)) {
+        showToast('Formato incorreto: precisa de { "items": [...] }');
+        return;
+      }
+
+      const validItems = parsed.items
+        .filter(i => i && typeof i.name === 'string' && i.name.trim())
+        .map(i => ({
+          id:          genId(),
+          name:        i.name.trim().slice(0, 80),
+          category:    CATEGORIES[i.category]                        ? i.category        : 'outros',
+          supermarket: SUPERMARKETS[i.supermarket || ''] !== undefined ? (i.supermarket || '') : '',
+          checked:     false,
+          createdAt:   Date.now(),
+        }));
+
+      if (validItems.length === 0) {
+        showToast('Nenhum item válido encontrado.');
+        return;
+      }
+
+      const n = validItems.length;
+      if (!confirm(`Importar ${n} ${n === 1 ? 'item' : 'itens'} e substituir a lista atual?`)) return;
+
+      state.items = validItems;
+      saveState();
+      render();
+      closeSheet('importOverlay', 'importSheet');
+      showToast(`${n} ${n === 1 ? 'item importado' : 'itens importados'}!`);
+    }
+
+    /* ─── Helpers de bottom sheet ────────────────────────────────── */
+
+    /** Abre overlay + sheet com animação CSS. */
+    function openSheet(overlayId, sheetId) {
+      document.getElementById(overlayId).classList.add('open');
+      requestAnimationFrame(() => document.getElementById(sheetId).classList.add('open'));
+      document.body.style.overflow = 'hidden';
+    }
+
+    /** Fecha overlay + sheet com animação CSS. */
+    function closeSheet(overlayId, sheetId) {
+      document.getElementById(sheetId).classList.remove('open');
+      document.getElementById(overlayId).classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    /* ================================================================
+       EVENT LISTENERS
+    ================================================================ */
+
+    // ── Formulário: adicionar item ────────────────────────────────
+    document.getElementById('addForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const nameEl   = document.getElementById('inputName');
+      const catEl    = document.getElementById('inputCategory');
+      const marketEl = document.getElementById('inputMarket');
+
+      if (!nameEl.value.trim()) {
+        nameEl.focus();
+        return;
+      }
+
+      addItem(nameEl.value, catEl.value, marketEl.value);
+
+      // Limpa o campo e mantém o foco para adição rápida
+      nameEl.value = '';
+      nameEl.focus();
+    });
+
+    // ── Delegação de eventos no conteúdo principal ────────────────
+    // Evita adicionar listeners em cada item individualmente.
+    document.getElementById('mainContent').addEventListener('click', function (e) {
+      // Botão de excluir
+      const delBtn = e.target.closest('[data-action="delete"]');
+      if (delBtn) {
+        const itemEl = delBtn.closest('[data-id]');
+        if (itemEl) deleteItem(itemEl.dataset.id);
+        return;
+      }
+
+      // Círculo de check
+      const checkEl = e.target.closest('.item-check');
+      if (checkEl) {
+        const itemEl = checkEl.closest('[data-id]');
+        if (itemEl) toggleItem(itemEl.dataset.id);
+      }
+    });
+
+    // ── Suporte a teclado nos círculos de check (acessibilidade) ──
+    document.getElementById('mainContent').addEventListener('keydown', function (e) {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('item-check')) {
+        e.preventDefault();
+        e.target.click();
+      }
+    });
+
+    // ── Botões de limpar ──────────────────────────────────────────
+    document.getElementById('clearCheckedBtn').addEventListener('click', clearChecked);
+    document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+
+    // ── Exportar / Importar ───────────────────────────────────────
+    document.getElementById('exportBtn').addEventListener('click', openExportSheet);
+    document.getElementById('importBtn').addEventListener('click', openImportSheet);
+    document.getElementById('closeExportBtn').addEventListener('click', () => closeSheet('exportOverlay', 'exportSheet'));
+    document.getElementById('closeImportBtn').addEventListener('click', () => closeSheet('importOverlay', 'importSheet'));
+    document.getElementById('copyJsonBtn').addEventListener('click', copyJson);
+    document.getElementById('doImportBtn').addEventListener('click', doImport);
+
+    // Fecha sheet ao clicar no overlay (fora do card)
+    ['exportOverlay', 'importOverlay'].forEach(id => {
+      document.getElementById(id).addEventListener('click', function (e) {
+        if (e.target === this) closeSheet(id, id.replace('Overlay', 'Sheet'));
+      });
+    });
+
+    /* ================================================================
+       INICIALIZAÇÃO
+    ================================================================ */
+    // Define o placeholder da textarea de importação com o JSON de exemplo
+    document.getElementById('importTextarea').placeholder = EXAMPLE_JSON;
+
+    loadState();
+    render();
+  </script>
+
+</body>
+</html>
